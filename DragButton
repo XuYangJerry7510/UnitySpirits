@@ -1,0 +1,93 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using DG.Tweening;
+using Unity.VisualScripting;
+using UnityEngine.UI;
+using TMPro;
+using Mono.Cecil.Cil;
+
+public class DragButton : MonoBehaviour, IDragHandler
+{
+
+    public Canvas canvas;
+    public TextMeshProUGUI text;
+
+    private bool isButtonInsideCanvas = true;
+
+    float transformWidth2;
+    float transformHeight2;
+    float canvasWidth2;
+    float canvasHeight2;
+    float textHeight;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        if (canvas == null)
+            canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
+        //canvas = GameObject.FindObjectOfType<Canvas>();
+        if (text == null)
+            text = GameObject.Find("ExplainText").GetComponent<TextMeshProUGUI>();
+
+        transformWidth2 = transform.GetComponent<RectTransform>().rect.width * 0.500f;
+        transformHeight2 = transform.GetComponent<RectTransform>().rect.height * 0.500f;
+        canvasWidth2 = canvas.GetComponent<RectTransform>().rect.width * 0.500f;
+        canvasHeight2 = canvas.GetComponent<RectTransform>().rect.height * 0.500f;
+        textHeight = text.GetComponent<RectTransform>().rect.height;
+        
+    }
+
+    // Update is called once per frame
+    void Update()//当按钮超出指定范围时，更新位置，置于边界
+    {
+        /*
+        Debug.Log("position:" + transform.position);
+        Debug.Log("LocalPosition" + transform.localPosition);
+        */
+        if (transform.localPosition.x + transformWidth2 > canvasWidth2)
+        {
+            transform.localPosition = new Vector2(canvasWidth2 - transformWidth2 * 1.1f, transform.localPosition.y);
+        }
+        if (transform.localPosition.x - transformWidth2 < -canvasWidth2)
+        {
+            transform.localPosition = new Vector2(-canvasWidth2 + transformWidth2 * 1.1f, transform.localPosition.y);
+        }
+        if (transform.localPosition.y + transformHeight2 > canvasHeight2)
+        {
+            transform.localPosition = new Vector2(transform.localPosition.x, canvasHeight2 - transformHeight2 * 1.1f);
+        }
+        if (transform.localPosition.y - transformHeight2 < -canvasHeight2 + textHeight)
+        {
+            transform.localPosition = new Vector2(transform.localPosition.x, -canvasHeight2 + textHeight + transformHeight2 * 1.1f);
+        }
+        text.GetComponentInParent<Image>().transform.localPosition = new Vector2(0, -canvasHeight2 + (textHeight * 0.500f));
+        text.GetComponentInParent<Image>().GetComponent<RectTransform>().sizeDelta = new Vector2(canvas.GetComponent<RectTransform>().rect.width, 100);
+        text.transform.localPosition = new Vector2(0,0);
+    }
+
+    public void OnDrag(PointerEventData eventData)//在Canvas区域内，按钮跟随鼠标(及拖动按钮)
+    {
+        transform.SetAsLastSibling();
+        Rect buttonWorldRect = new Rect(transform.TransformPoint(transform.GetComponent<RectTransform>().rect.min), transform.TransformVector(transform.GetComponent<RectTransform>().rect.size));
+        // 将矩形转换为屏幕空间，并与 canvasRect 进行比较
+        isButtonInsideCanvas = RectTransformUtility.RectangleContainsScreenPoint(canvas.GetComponent<RectTransform>(), buttonWorldRect.min) && RectTransformUtility.RectangleContainsScreenPoint(canvas.GetComponent<RectTransform>(), buttonWorldRect.max);
+        if (isButtonInsideCanvas)
+        {
+            transform.position = Input.mousePosition;
+        }
+    }
+
+}
+
+/*
+
+public class DragButton : MonoBehaviour, IDragHandler
+{
+    public void OnDrag(PointerEventData eventData)
+    {
+        transform.position = Input.mousePosition;
+    }
+}
+*/
