@@ -46,6 +46,8 @@ public class DragButton : MonoBehaviour, IDragHandler
         Debug.Log("position:" + transform.position);
         Debug.Log("LocalPosition" + transform.localPosition);
         */
+        //注意position 与 localPosition，这里为了方便使用的是localPosition(其实是position调半天调不对)
+        //注意正方向
         if (transform.localPosition.x + transformWidth2 > canvasWidth2)
         {
             transform.localPosition = new Vector2(canvasWidth2 - transformWidth2 * 1.1f, transform.localPosition.y);
