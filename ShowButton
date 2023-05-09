@@ -1,0 +1,220 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using DG.Tweening;
+using Unity.VisualScripting;
+using UnityEngine.EventSystems;
+using System;
+using TMPro;
+//using UnityEngine.UIElements;
+//using UnityEditor;
+
+//[CustomEditor(typeof(ShowExplainText))]
+
+public class ShowButton : MonoBehaviour, IPointerClickHandler
+{
+
+    public ShowExplainText showExplainText;
+
+    // Start is called before the first frame update
+    public Canvas canvas;
+
+    // 在根按钮上添加OnClick事件
+    public Button RootButton;  // 根按钮
+    public GameObject SubPanel;  // 子面板
+    public float x;
+    public float y;
+
+
+    public Action ClickAction = null;
+    float doubleTapTime = 1.2f; // 预定义的时间间隔（单位：秒）
+    float lastTapTime = 0f; // 上一次触摸事件的时间戳s
+
+
+    public GameObject imagePrefab; // 图片 Prefab 对象
+    private GameObject lineImage; // 图片对象
+
+    public bool CanShowSubplane = true;
+    private bool SubplaneHaveChild ;
+    // public List<Button> SubplaneChild;
+    //public int SubplaneChildCount = 1;
+
+    public void Start()
+    {
+        DOTween.Init();//DOTween动画插件初始化
+        canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
+        SubplaneHaveChild = (SubPanel.gameObject.GetComponents<ShowButton>().Length > 0);//是否存在子子按钮（孙按钮）
+        if (SubplaneHaveChild)//孙按钮初始隐藏
+        {
+            ShowButton[] scripts = SubPanel.gameObject.GetComponents<ShowButton>();
+            foreach (ShowButton script in scripts)
+            {
+                script.Start();
+            }
+        }
+        SubPanel.SetActive(false);  // 隐藏子面板
+
+        //RootButton.onClick.AddListener(ShowSubPanel);  // 监听根按钮点击事件
+        SetLine();//设置跟与子按钮间连线
+        lineImage.transform.SetParent(transform.parent);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        DoubleTouch();//触摸
+        if (SubPanel.activeSelf)
+            DrawLine();//若子显示，则画线
+    }
+
+    void ShowSubPanel()//显示/隐藏子按钮
+    {
+        if (CanShowSubplane)
+        {
+            if (SubPanel.activeSelf)
+            {
+                SubPanel.transform.DOKill();
+                SubPanel.transform.SetParent(transform);
+                SubPanel.transform.DOMove(RootButton.transform.position, 0.1f);
+                StartCoroutine(DisShow());
+                //SubPanel.SetActive(false);  // 隐藏子菜单
+                //lineImage.SetActive(false);
+                //SubPanel.transform.SetParent(transform.parent);
+                //Destroy(lineRenderer);  // 销毁连接线
+            }// 如果子面板已显示
+            else
+            {
+                SubPanel.transform.DOKill();
+                SubPanel.SetActive(true);  // 显示子面板
+                lineImage.SetActive(true);
+                SubPanel.transform.SetParent(transform);  // 将子面板移动到根按钮下方
+                SubPanel.transform.position = RootButton.transform.position;
+                //subPanel.transform.position = new Vector3(transform.position.x + 100f, transform.position.y, transform.position.z);  // 设置子面板的位置
+                //if (subPanel.transform.position.x + xz >= rootButton.GetComponentInParent<Canvas>().GetComponent<RectTransform>(Rect.MinMaxRect );
+                //subPanel.transform.position = new Vector2(transform.position.x + x, transform.position.y + y);
+                SubPanel.transform.DOMove(new Vector2(transform.position.x + x, transform.position.y + y), 0.7f);
+                SubPanel.transform.SetParent(transform.parent);
+            }
+        }
+    }
+
+    IEnumerator Show()//为了使动画连贯-孙到子后子到跟
+    {
+        if (SubplaneHaveChild)
+        {
+            ShowButton[] scripts = SubPanel.gameObject.GetComponents<ShowButton>();
+            foreach (ShowButton script in scripts)
+            {
+                if (script.SubPanel.activeSelf)
+                    script.ShowSubPanel();
+            }
+            
+        }
+        yield return new WaitForSeconds(0.2f);//延时，与DisShow中等待时间相同
+        ShowSubPanel();
+    }
+
+    IEnumerator DisShow()
+    {
+        // 等待0.2秒
+        yield return new WaitForSeconds(0.2f);
+
+        // 在这里编写需要延时执行的代码
+        SubPanel.SetActive(false);  // 隐藏子菜单
+        lineImage.SetActive(false);
+        SubPanel.transform.SetParent(transform.parent);
+
+    }
+
+
+    public void ShowText()//显示按钮对应文本
+    {
+        showExplainText.SetExplainText();
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == 0)
+        {
+            if (eventData.clickCount == 1)
+            {
+                ShowText();
+                StartCoroutine(DelayFuc());
+            }
+            else if (eventData.clickCount == 2)
+            {
+                StartCoroutine(Show());
+            }
+        }
+    }
+
+    public void DoubleTouch()
+    {
+        //Vector2 localPoint;
+        if (Input.touchCount == 1) // 如果有一个触摸事件
+        {
+            Touch touch = Input.GetTouch(0);
+            //RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.GetComponent<RectTransform>(), touch.position, null, out localPoint);
+            Vector2 touchPos = touch.position;
+            Vector2 localPos;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform, touchPos, canvas.worldCamera, out localPos);
+            if (touch.phase == TouchPhase.Ended) // 如果触摸结束
+            {
+                float timeSinceLastTap = Time.time - lastTapTime; // 计算当前触摸事件与上一次触摸事件之间的时间差
+                if (timeSinceLastTap < doubleTapTime) // 如果时间差小于预定义的时间间隔
+                {
+                    //Vector2 touchPos = Camera.main.ScreenToWorldPoint(Input.GetTouch(0).position);
+                    //Collider2D colliders = Physics2D.OverlapPoint(touchPos);
+                    if (RectTransformUtility.RectangleContainsScreenPoint(RootButton.transform as RectTransform, touchPos, canvas.worldCamera))
+                    {
+                        // 触摸点在按钮内，执行相应操作
+                        StartCoroutine(Show());
+                    }
+                    // 执行您要执行的操作，例如：
+
+                    // 注意重置上一次触摸事件的时间戳
+                    lastTapTime = 0f;
+                }
+                else
+                {
+                    // 更新上一次触摸事件的时间戳
+                    lastTapTime = Time.time;
+                }
+            }
+        }
+    }
+
+    IEnumerator DelayFuc()
+    {
+        yield return new WaitForSeconds(1.5f);
+        ClickAction?.Invoke();
+    }
+
+    public void SetLine()//生成连线与初始化
+    {
+        lineImage = Instantiate(imagePrefab, Vector3.zero, Quaternion.identity);
+        lineImage.transform.SetParent(transform); // 将图片设置为父节点的子对象
+        lineImage.GetComponent<RectTransform>().sizeDelta = new Vector2(2f, 10f);
+        lineImage.SetActive(false);
+    }
+
+    public void DrawLine()//动态更新
+    {
+        Vector3 direction = SubPanel.transform.position - RootButton.transform.position;
+        float distance = direction.magnitude;
+        float midX = (RootButton.transform.position.x + SubPanel.transform.position.x) * 0.50000f;//中点公式（锚点为(0.5,0.5)）
+        float midY = (RootButton.transform.position.y + SubPanel.transform.position.y) * 0.50000f;//同上
+        float dis = Mathf.Sqrt(Mathf.Pow(RootButton.transform.position.x - SubPanel.transform.position.x, 2.0000f) + Mathf.Pow(RootButton.transform.position.y - SubPanel.transform.position.y, 2.0000f));//两点间距离公式
+
+        lineImage.GetComponent<RectTransform>().sizeDelta = new Vector2(5f, dis);//动态设置长度
+        lineImage.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0.5f);//可省略
+        //lineImage.transform.position = RootButton.transform.position;
+        //lineImage.GetComponent<RectTransform>();
+        lineImage.transform.position = new Vector3(midX, midY, 0);//更新位置
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;//三角函数算出旋转角(好像是与y轴正方向的夹角，不大清楚)
+        lineImage.transform.rotation = Quaternion.Euler(new Vector3(0, 0, angle - 90));//angle - 90 是试出来的，不知原理
+        lineImage.GetComponent<RectTransform>().SetAsFirstSibling();//使按钮在线段上方
+    }
+}
+
